@@ -9,6 +9,9 @@ dist-ssr/
 .vite/
 *.local
 
+# Vercel
+.vercel/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -25,3 +28,6 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+
+.vercel
+.env*

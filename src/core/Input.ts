@@ -47,15 +47,20 @@ export class InputState {
   // ---------- Keyboard ----------
   private setupKeyboard() {
     window.addEventListener('keydown', (e) => {
+      // Prevent browser quick-find / scrolling for all gameplay keys, mapped or unmapped
+      if (e.key !== 'F5' && e.key !== 'F12' && e.key !== 'F11' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+      }
       if (e.code === 'KeyP') this.pausePressed = true;
       if (!this.enabled) return;
-      if (this.HANDLED.has(e.code)) e.preventDefault();
       if (!this.keys[e.code]) this.onKeyEdge(e.code, true);
       this.keys[e.code] = true;
       this.recomputeKeyboardMove();
     });
     window.addEventListener('keyup', (e) => {
-      if (this.enabled && this.HANDLED.has(e.code)) e.preventDefault();
+      if (e.key !== 'F5' && e.key !== 'F12' && e.key !== 'F11' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+      }
       this.keys[e.code] = false;
       this.onKeyEdge(e.code, false);
       this.recomputeKeyboardMove();

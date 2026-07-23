@@ -217,7 +217,15 @@ export class UI {
     panel.append(this.slider('Look Sensitivity', 40, 200, Math.round(s.lookSensitivity * 100), '%', v => { s.lookSensitivity = v / 100; commit(); }));
     panel.append(this.toggleRow('Invert Vertical Look', s.invertY, v => { s.invertY = v; commit(); }));
 
-    panel.append(el('div', { class: 'section-label' }, ['Graphics']));
+    panel.append(el('div', { class: 'section-label' }, ['Graphics & Display']));
+    const fsRow = el('div', { class: 'row' }, [
+      el('label', {}, ['Fullscreen']),
+      this.button('Toggle', '', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+        else document.exitFullscreen().catch(() => {});
+      })
+    ]);
+    panel.append(fsRow);
     panel.append(this.segmentedRow<Quality>('Quality', ['low', 'medium', 'high'], s.quality,
       ['Low', 'Medium', 'High'], v => { s.quality = v; commit(); }));
 
