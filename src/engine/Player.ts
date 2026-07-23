@@ -11,7 +11,7 @@ export class Player {
 
   private readonly walkSpeed = 5.0;
   private readonly sprintMult = 1.7;
-  private readonly jumpForce = 9.0;
+  private readonly jumpForce = 6.5;
   private velocity = new THREE.Vector3();
   private grounded = false;
   private facingYaw = 0;
@@ -114,7 +114,8 @@ export class Player {
 
   updateRender(_alpha: number) {
     const pos = this.body.translation();
-    this.model.root.position.set(pos.x, pos.y, pos.z);
+    // Offset model so feet (-0.71 local) match capsule bottom (-1.0 local)
+    this.model.root.position.set(pos.x, pos.y - 0.29, pos.z);
   }
 
   respawn(pos: THREE.Vector3) {

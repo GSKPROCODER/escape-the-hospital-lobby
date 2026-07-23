@@ -109,7 +109,7 @@ export class CharacterModel {
       new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: 0.5, depthWrite: false })
     );
     shadow.rotation.x = -Math.PI / 2;
-    shadow.position.y = -1.02;
+    shadow.position.y = -0.72; // Positioned just under the feet (-0.71)
     this.root.add(shadow);
   }
 
