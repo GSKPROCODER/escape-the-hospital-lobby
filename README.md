@@ -20,6 +20,9 @@ A horror-themed **3D escape lobby** for the web. You wake up trapped in an aband
 | [docs/LEVELS.md](./docs/LEVELS.md) | Full spec for all **15 levels**. |
 | [docs/TECH_STACK.md](./docs/TECH_STACK.md) | Stack, architecture, project layout, deploy. |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phased build plan (start of engineering work). |
+| [docs/SOUND_DESIGN.md](./docs/SOUND_DESIGN.md) | Full horror sound bible — pillars, mix, per-wing soundscapes, sourcing. |
+| [docs/LORE.md](./docs/LORE.md) | Story bible — the Incident, the Presence, per-wing beats, collectible notes. |
+| [BETTERMENT.md](./BETTERMENT.md) | Critic evaluation of the current build + prioritized improvement spec. |
 
 ## 🕹️ At a glance
 - **Genre:** 3D escape / obstacle course (lobby), horror-lite.
