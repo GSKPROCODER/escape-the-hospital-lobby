@@ -116,6 +116,20 @@ simply walks away. The systems are production-grade; the *game built on them* is
   4. [Game.ts](src/game/Game.ts): bump `RESPAWN_GRACE` to 2.0 s after a *caught* death.
 
 ### 3.3 Levels are far too small
+> ✅ **Fixed.** All three built wings widened to their target scale: Level 1 ~55m→**~108m**
+> (added a 4th room, Supply Room), Level 2 ~30m→**~96m** (5×4 aisle maze, keycard moved deep in,
+> exit is now its own room), Level 3 ~38m→**~105m** (added a 3rd bed bay + 3rd auto-door for
+> escalation). See the updated [docs/levels/01–03](docs/levels/) for exact new layouts.
+>
+> **Bug found while widening (real, not cosmetic):** hazard/fall respawns had **no grace period**
+> at all — only the enemy-catch check was gated on `graceTimer`. When Level 1's new checkpoint-2
+> position landed a few units from a `hazardTile`, dying there re-triggered the same hazard the
+> very next frame, forever, with zero way to recover (confirmed via an instrumented death log
+> during verification). Fixed by gating **all three** death checks (fall/hazard/caught) behind
+> `graceTimer <= 0` in `Game.updatePlay()`, not just the catch — this protects every future
+> level from the same class of bug, not just Level 1's specific coordinates. Also repositioned
+> the specific hazard tile that triggered it off the walking centerline (it previously covered
+> x=0 even with player-capsule padding, making "walk straight" never actually safe).
 - **What's wrong:** Level 1 spans ~55 m (z +10 → −45) with 16×14 / 14×12 rooms and is
   walkable start-to-exit in **~25 seconds**; L2 ends at z=−22, L3 at z=−30 — even shorter.
   Our own [docs/LEVELS.md](docs/LEVELS.md) targets 1:00–2:00 for these wings.
@@ -281,7 +295,8 @@ Close the two ✗ items before calling the a11y story done.
 | Priority | Items | Outcome |
 |---|---|---|
 | **P0** | ✅ done — 3.1 auto-checkpoints · 3.2 fair respawns (+ camera start-facing & auto-trail-spin fixes found while verifying) · 3.4 chase speeds/lunge · 8.3 win-screen name · 7.6 jump sound & audio suspend | The two rage-quits are gone; the hunt is real |
-| **P1** (following passes) | 3.3 bigger wings ×3 · 3.5 slice finale · 7.1 footsteps · 7.2 music layers · 7.3 hazard/door sfx · 5.1 landmarks · 4.1 hide verb · 8.2 captions · 8.4 best-time delta | Stops feeling like a prototype |
+| **P0.5** | ✅ done — 3.3 bigger wings ×3 (~100m each) · universal death-grace-period bug (fall/hazard/caught all gated) · hazard tiles get automatic warning-stripe texture + pulse instead of a flat placeholder color | No more 40-second levels, no more infinite death loops, hazards read as hazards |
+| **P1** (next) | 3.5 slice finale · 7.1 footsteps · 7.2 music layers · 7.3 hazard/door sfx · 5.1 landmarks · 4.1 hide verb · 8.2 captions · 8.4 best-time delta | Stops feeling like a prototype |
 | **P2** | 4.2 collectibles · 4.6 stamina · 6.1 wall textures · 6.2 dust · 6.4 scarier enemy · 8.1 remapping · 8.7 gamepad · 9.x feel pack · 10.1 code-split | Feels like a finished small game |
 | **P3** | Wings 4–15 · full reward/escape sequence · rigged characters · leaderboards · PWA | The complete 15-wing vision |
 

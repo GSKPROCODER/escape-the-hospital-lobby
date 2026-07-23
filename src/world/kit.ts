@@ -15,6 +15,8 @@ interface HazardVol {
   center: THREE.Vector3;
   half: THREE.Vector3;
   mesh?: THREE.Mesh;
+  mat?: THREE.MeshStandardMaterial;
+  baseEmissive?: number;
   sweep?: { from: THREE.Vector3; to: THREE.Vector3; period: number; phase: number };
 }
 interface Door {
@@ -206,14 +208,26 @@ export class LevelKit {
   }
 
   // ---------- hazards ----------
-  /** Static hazard patch on the floor (touch → respawn). Emissive marker + tall trigger volume. */
+  /**
+   * Static hazard patch on the floor (touch → respawn). Reads as an actual
+   * warning automatically — diagonal hazard-stripe texture (the universal
+   * "danger" visual language) plus a slow automatic pulse — instead of a
+   * flat, static, single-color rectangle that looks like an unfinished
+   * placeholder.
+   */
   hazardTile(x: number, z: number, w: number, d: number, color = 0xff7a1a) {
-    const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.8, roughness: 0.6 });
+    const tex = makeHazardStripeTexture(color);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(Math.max(1, Math.round(w / 1.2)), Math.max(1, Math.round(d / 1.2)));
+    this.disposables.push(tex);
+    const mat = new THREE.MeshStandardMaterial({
+      map: tex, color: 0xffffff, emissive: color, emissiveIntensity: 0.9, roughness: 0.5,
+    });
     this.disposables.push(mat);
     const patch = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), mat);
     patch.position.set(x, 0.05, z);
     this.scene.add(patch); this.meshes.push(patch); this.disposables.push(patch.geometry);
-    this.hazards.push({ center: new THREE.Vector3(x, 0.9, z), half: new THREE.Vector3(w / 2, 1.1, d / 2) });
+    this.hazards.push({ center: new THREE.Vector3(x, 0.9, z), half: new THREE.Vector3(w / 2, 1.1, d / 2), mat, baseEmissive: 0.9 });
   }
 
   /** A glowing hazard that sweeps between two points (timing hazard). */
@@ -223,7 +237,8 @@ export class LevelKit {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), mat);
     this.scene.add(mesh); this.meshes.push(mesh); this.disposables.push(mesh.geometry);
     this.hazards.push({
-      center: from.clone(), half: new THREE.Vector3(size.x / 2, size.y / 2, size.z / 2), mesh,
+      center: from.clone(), half: new THREE.Vector3(size.x / 2, size.y / 2, size.z / 2), mesh, mat,
+      baseEmissive: 1.2,
       sweep: { from: from.clone(), to: to.clone(), period, phase },
     });
   }
@@ -299,6 +314,13 @@ export class LevelKit {
       const t = 0.5 - 0.5 * Math.cos((elapsed / s.period + s.phase) * Math.PI * 2);
       h.center.lerpVectors(s.from, s.to, t);
       if (h.mesh) h.mesh.position.copy(h.center);
+    }
+    // Every hazard warns for itself automatically — a slow emissive pulse so
+    // it's never mistaken for painted floor decoration.
+    for (const h of this.hazards) {
+      if (!h.mat || h.baseEmissive === undefined) continue;
+      const pulse = reducedMotion ? 1 : 0.75 + 0.35 * Math.sin(elapsed * 2.6 + h.center.x);
+      h.mat.emissiveIntensity = h.baseEmissive * pulse;
     }
     // Doors
     for (const d of this.doors) {
@@ -376,6 +398,29 @@ export class LevelKit {
     this.disposables.forEach(d => d.dispose());
     this.disposables.length = 0;
   }
+}
+
+/** Diagonal hazard-stripe pattern (the universal caution-tape look) tinted by `color`. */
+function makeHazardStripeTexture(color: number): THREE.CanvasTexture {
+  const s = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = s;
+  const ctx = canvas.getContext('2d')!;
+  const hex = `#${color.toString(16).padStart(6, '0')}`;
+  ctx.fillStyle = '#15181a';
+  ctx.fillRect(0, 0, s, s);
+  ctx.strokeStyle = hex;
+  ctx.lineWidth = s / 6;
+  ctx.lineCap = 'square';
+  for (let i = -s; i < s * 2; i += s / 3) {
+    ctx.beginPath();
+    ctx.moveTo(i, s + 10);
+    ctx.lineTo(i + s + 10, -10);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 function makeTileTexture(): THREE.CanvasTexture {

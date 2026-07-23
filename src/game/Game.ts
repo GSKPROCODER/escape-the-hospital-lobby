@@ -131,10 +131,15 @@ export class Game {
       // Win (gated by canExit — e.g. keycard)
       if (this.levels.checkWin(playerPos)) { this.finished = true; this.onWin?.(); }
 
-      // Death: fall / hazard (no life cost) or enemy catch (life cost on finite modes)
-      else if (playerPos.y < this.levels.getFallY()) this.respawn('fall');
-      else if (this.levels.hazardHit(playerPos)) this.respawn('hazard');
-      else if (this.graceTimer <= 0 && this.enemy.didCatch(playerPos)) this.respawn('caught');
+      // Death: fall / hazard (no life cost) or enemy catch (life cost on finite modes).
+      // All three are gated on graceTimer — without this, a checkpoint respawn
+      // that happens to land near an active hazard (or the enemy) re-triggers
+      // the very next frame, forever, with no way for the player to react.
+      else if (this.graceTimer <= 0) {
+        if (playerPos.y < this.levels.getFallY()) this.respawn('fall');
+        else if (this.levels.hazardHit(playerPos)) this.respawn('hazard');
+        else if (this.enemy.didCatch(playerPos)) this.respawn('caught');
+      }
     }
 
     this.input.resetPerFrame();
