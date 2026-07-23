@@ -1,12 +1,16 @@
 # Level Specification — Escape the Hospital Lobby
 
-> **Status:** Draft v2 — redesigned around **enemy-safe rooms + corridors** (no bottomless pits).
+> **Status:** Draft v3 — all **15 phases now have a full, dedicated design doc** in
+> [`docs/levels/`](./levels/). This file is the **index and shared design language**; each
+> phase's own doc has its complete flow, reference layout, hazards, enemy behavior, checkpoints,
+> and narrative tie-in.
 > **Purpose:** Per-level design so an implementer (human or AI) can build each wing. Read
-> [GAME_DESIGN.md](./GAME_DESIGN.md) first for shared mechanics.
+> [GAME_DESIGN.md](./GAME_DESIGN.md) first for shared mechanics, [LORE.md](./LORE.md) for the
+> story each wing is built around, and [SOUND_DESIGN.md](./SOUND_DESIGN.md) for its soundscape.
 
 ---
 
-## Design language (every level follows this)
+## Design language (every phase follows this)
 
 - **Win condition:** *Survive and reach the exit.* The "Presence" hunts you; a run-timer counts up.
 - **Floors are continuous** across all enemy-reachable space (rooms joined by corridors/doorways),
@@ -14,68 +18,58 @@
 - **Challenge without bottomless pits:** climb-over furniture, **timed auto-doors**, **sweeping
   hazards**, **hazard tiles** (spill/laser/steam — touch → respawn) on solid floor, slippery/sticky
   floor, and **key/lever** puzzles. Missing a jump means landing on the floor, not dying.
+- **Checkpoints are crossing lines**, not spots to stand on: `playerPos.z <= trigger.z` activates
+  a checkpoint at any x/height — off-center or mid-air both count (see
+  [BETTERMENT.md §3.1](../BETTERMENT.md#31-checkpoints-require-standing-on-a-spot--must-become-automatic-crossing-lines)).
 - **Death:** checkpoint respawn (unlimited on Easy). On Normal/Nightmare an enemy catch costs a
-  life; falls/hazards just respawn. Difficulty scales enemy sight/speed/persistence + lives.
+  life; falls/hazards just respawn. Difficulty scales enemy sight/speed/persistence + lives
+  (see [Difficulty.ts](../src/core/Difficulty.ts)); the enemy resets to the patrol point
+  furthest from the player's respawn, never on top of them.
 - **Enemy:** patrols the main floor path, hunts on sight (walls block line-of-sight) and sound
-  (sprinting/landing), loses you around corners. Spawns **away** from the player for a fair start.
+  (sprinting/landing), loses you around corners. Spawns **away** from the player for a fair
+  start. Escalates across the three acts per [LORE.md §4](./LORE.md#4-the-presence).
+- **Scale target** (per [BETTERMENT.md §3.3](../BETTERMENT.md#33-levels-are-far-too-small)):
+  ~80–110 m per wing, 4–6 distinct rooms, at least one loop/alternate route, 2:30–4:00
+  first-clear time. Wings 1–3 predate this correction and are documented as-built with the gap
+  noted; Wings 4–15 are designed to this target from the start.
 
 Built with a small kit (`src/world/kit.ts`): `room`, `corridorZ`, `crate`, `hazardTile`,
-`sweepingHazard`, `autoDoor`, `keycardAt`, `exitDoor`, `light`.
-
-**Build status:** ✅ Levels **1–3 built**. Levels 4–15 are designed below and follow the same
-template (Level Select shows them as "Soon" until built).
+`sweepingHazard`, `autoDoor`, `keycardAt`, `exitDoor`, `checkpointStrip`, `sign`, `wheelchair`,
+`light`. Phases 7 (vertical stairwell) and others introduce a few new primitives noted in their
+own docs (e.g. a `ramp()`/`stairs()` helper — see [BETTERMENT.md §5.2](../BETTERMENT.md)).
 
 ---
 
 ## Overview
 
-| # | Wing | Flow (rooms → exit) | Signature hazard / puzzle | Enemy | Status |
-|---|------|---------------------|---------------------------|-------|--------|
-| 1 | **Reception Wing** | Lobby → corridor → Waiting Room → corridor → Exit Foyer | climb-over desk & seats; **sweeping spark pole**; spill tile | patrols waiting room | ✅ built |
-| 2 | **Records Room** | Foyer → filing-cabinet aisles → archive exit | **find the keycard** on a shelf to unlock the exit | stalks the aisles | ✅ built |
-| 3 | **Ward A** | Nurse station → bed-bay 1 → bed-bay 2 → ward exit | **timed sliding auto-doors**; spilled-chem tiles | hunts across bays | ✅ built |
-| 4 | Pharmacy | corridor → dispensary → store exit | **laser tripwires** (duck/jump); grab meds key | patrols | design |
-| 5 | Radiology | control room → scanner hall → exit | rotating **scanner arm** (timing); screens as cover | patrols hall | design |
-| 6 | The Morgue | prep → cold storage → freezer exit | **slippery floor**; sliding drawers as moving cover | slower (cold) | design |
-| 7 | Stairwell | switchback landings up 3 floors → door | climb floored **landings**; ledge-safe rails | follows up ramps | design |
-| 8 | Ventilation | duct room → crawl maze → grate exit | **wall fans** (touch→respawn); low crawl gaps | short sightlines | design |
-| 9 | Operating Theatre | scrub room → theatre → recovery exit | moving **equipment carts** (timing); lamp sweep | patrols theatre | design |
-| 10 | Flooded Basement | stairs → flooded hall → pump-room exit | shallow water slows; **timed sluice gate** | wades slowly | design |
-| 11 | Boiler Room | pipe corridor → boiler hall → exit | **steam-jet** bursts (timing); climb-over pipes | patrols hall | design |
-| 12 | Security Wing | lobby → camera grid → control exit | **laser grid** + hit 3 breakers to open the door | actively hunts | design |
-| 13 | Quiet Ward | dim ward of pillars → exit | **stealth**: break line-of-sight; faster enemy | aggressive | design |
-| 14 | Generator Room | 3 hazard bays → restore power → exit | multi-lever **power puzzle** gated by hazards | patrols bays | design |
-| 15 | Main Exit Gauntlet | connected wings → front doors → **escape** | synthesis of all hazards; final chase | relentless | design |
+| # | Wing | Act | Signature hazard / puzzle | Enemy | Status | Doc |
+|---|------|-----|---------------------------|-------|--------|-----|
+| 1 | Reception Wing | I | climb-over desk & seats; sweeping spark pole; spill tile | patrols waiting room | ✅ built | [01-reception-wing.md](./levels/01-reception-wing.md) |
+| 2 | Records Room | I | find the keycard to unlock the exit | stalks the aisles | ✅ built | [02-records-room.md](./levels/02-records-room.md) |
+| 3 | Ward A | I | two timed sliding auto-doors | hunts across bays | ✅ built | [03-ward-a.md](./levels/03-ward-a.md) |
+| 4 | Pharmacy | I | laser tripwires; meds key; risk/speed loop | patrols, biases the risky loop | 📐 designed | [04-pharmacy.md](./levels/04-pharmacy.md) |
+| 5 | Radiology | I | rotating scanner arm (long, readable sweep) | patrols the hall | 📐 designed | [05-radiology.md](./levels/05-radiology.md) |
+| 6 | The Morgue | I→II | slippery floor; sliding drawers as cover | slower (cold) | 📐 designed | [06-the-morgue.md](./levels/06-the-morgue.md) |
+| 7 | Stairwell | II | vertical progression; switchback flights | follows up the flights | 📐 designed | [07-stairwell.md](./levels/07-stairwell.md) |
+| 8 | Ventilation | II | branching crawl-maze; wall fans | short sightlines only | 📐 designed | [08-ventilation.md](./levels/08-ventilation.md) |
+| 9 | Operating Theatre | II | moving carts; lamp sweep reveals you | near-silent ambience | 📐 designed | [09-operating-theatre.md](./levels/09-operating-theatre.md) |
+| 10 | Flooded Basement | II | shallow water; timed sluice gate | wades slowly (favors player) | 📐 designed | [10-flooded-basement.md](./levels/10-flooded-basement.md) |
+| 11 | Boiler Room | III | steam-jet bursts; the Incident explained | actively hunts from entry | 📐 designed | [11-boiler-room.md](./levels/11-boiler-room.md) |
+| 12 | Security Wing | III | dense laser grid + 3 breakers | actively hunts | 📐 designed | [12-security-wing.md](./levels/12-security-wing.md) |
+| 13 | Quiet Ward | III | pure stealth; pillar sightline maze | most aggressive standard config | 📐 designed | [13-quiet-ward.md](./levels/13-quiet-ward.md) |
+| 14 | Generator Room | III | 3-bay power puzzle (steam/spark/gate) | intercepts the last bay | 📐 designed | [14-generator-room.md](./levels/14-generator-room.md) |
+| 15 | Main Exit Gauntlet | III | synthesis of every hazard; scripted chase | relentless (Nightmare floor) | 📐 designed | [15-main-exit-gauntlet.md](./levels/15-main-exit-gauntlet.md) |
 
-Clearing **Level 15** triggers the escape + reward (framework now; full reward later).
-
----
-
-## Built levels (as implemented)
-
-### Level 1 — Reception Wing  `src/world/levels/level01.ts`
-- **Flow:** Lobby (spawn) → corridor → Waiting Room → corridor → Exit Foyer (exit door).
-- **Hazards:** reception desk & waiting-room seats to climb over; a **spark pole** sweeping across
-  the waiting room (time your crossing); a **spill tile** in the second corridor (pass on the left).
-- **Enemy:** spawns in/near the waiting room and patrols it — the lobby start is safe.
-- **Checkpoints:** corridor entrance, waiting room, foyer entrance. **Exit:** unlocked door.
-
-### Level 2 — Records Room  `src/world/levels/level02.ts`
-- **Flow:** entry foyer → records room of filing-cabinet aisles → locked archive exit.
-- **Puzzle:** the exit is **locked** — find the glowing **keycard** on the east shelf (climb the
-  shelf crate) to unlock it. Objective text updates once collected.
-- **Enemy:** patrols the aisles, using cabinets to break/gain line-of-sight.
-- **Hazards:** a spill tile near the exit approach.
-
-### Level 3 — Ward A  `src/world/levels/level03.ts`
-- **Flow:** nurse station → bed-bay 1 → bed-bay 2 → ward exit, through **two timed auto-doors**.
-- **Hazards:** sliding auto-doors (cross while open, offset timing between them); spilled-chemical
-  hazard tiles to weave around; beds to climb.
-- **Enemy:** starts deep in bay 2 and hunts forward across the bays.
+Clearing **Phase 15** triggers the escape + reward sequence
+([GAME_DESIGN.md §11](./GAME_DESIGN.md#11-reward-reward), endings in
+[LORE.md §7](./LORE.md#7-introoutro-scripts)).
 
 ---
 
 ## Open questions (for the designer)
-- Confirm the difficulty tuning (Easy/Normal/Nightmare enemy + lives) feels right per wing.
-- Any wings to reorder, retheme, or add before the remaining 4–15 are built?
-- Final **reward** at Level 15 (see [GAME_DESIGN.md](./GAME_DESIGN.md#reward)).
+- Confirm the difficulty tuning (Easy/Normal/Nightmare enemy + lives) feels right per wing,
+  especially the wing-specific overrides (Morgue slower, Quiet Ward more aggressive, Phase 15's
+  Nightmare-floor).
+- Wings 1–3 are undersized relative to the corrected scale target — worth a revisit pass once
+  4–15 are built, so the whole game reads consistently (BETTERMENT §3.3).
+- Any wings to reorder, retheme, or add?
