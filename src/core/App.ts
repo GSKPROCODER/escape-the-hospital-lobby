@@ -190,6 +190,7 @@ export class App {
     this.input.exitPointerLock();
     this.touch.setActive(false);
     document.body.classList.remove('danger', 'playing');
+    this.audio.suspend(); // don't let ambience run on behind the pause screen / a hidden tab
     this.ui.showPause({
       levelIndex: this.game.getLevelIndex(),
       levelName: this.game.getLevelName(),
@@ -217,7 +218,7 @@ export class App {
     this.save.recordBestTime(this.game.getLevelId(), this.game.getPlayTime());
     this.save.unlockLevel(idx + 1);
     const hasNext = idx + 1 <= TOTAL_LEVELS && !!getBuiltLevel(idx + 1);
-    this.ui.showWin(formatTime(this.game.getPlayTime()), this.game.getDeaths(), hasNext);
+    this.ui.showWin(this.game.getLevelName(), formatTime(this.game.getPlayTime()), this.game.getDeaths(), hasNext);
   }
 
   private handleFail() {

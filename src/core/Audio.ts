@@ -39,6 +39,11 @@ export class AudioEngine {
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
 
+  /** Suspend audio processing (pause screen / tab hidden) so ambience doesn't run on. */
+  suspend() {
+    if (this.ctx && this.ctx.state === 'running') void this.ctx.suspend();
+  }
+
   applySettings(settings: GameSettings) {
     this.settings = settings;
     if (this.ctx) this.applyVolumes();

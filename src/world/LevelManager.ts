@@ -38,18 +38,26 @@ export class LevelManager {
     this.reachedIndex = -1;
   }
 
+  /**
+   * Checkpoints are progress LINES (z <= trigger.z), not spots to stand on —
+   * any x, any height, even mid-air counts. Triggers are in monotonically
+   * decreasing z order, so once one hasn't been crossed, none further have
+   * either; take the furthest line crossed this frame (handles skipping
+   * ahead in one jump without missing earlier checkpoints).
+   */
   updateCheckpoints(playerPos: THREE.Vector3): number {
     if (!this.currentLevel) return -1;
     const cps = this.currentLevel.checkpoints;
-    for (let i = 0; i < cps.length; i++) {
-      if (i <= this.reachedIndex) continue;
-      if (playerPos.distanceTo(cps[i].trigger) <= cps[i].radius) {
-        this.reachedIndex = i;
-        this.respawn = cps[i].pos.clone();
-        return i;
-      }
+    let activated = -1;
+    for (let i = this.reachedIndex + 1; i < cps.length; i++) {
+      if (playerPos.z <= cps[i].trigger.z) activated = i;
+      else break;
     }
-    return -1;
+    if (activated >= 0) {
+      this.reachedIndex = activated;
+      this.respawn = cps[activated].pos.clone();
+    }
+    return activated;
   }
 
   checkWin(playerPos: THREE.Vector3): boolean {

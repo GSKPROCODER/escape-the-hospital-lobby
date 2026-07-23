@@ -59,6 +59,11 @@ simply walks away. The systems are production-grade; the *game built on them* is
 ## 3. P0 — Critical flaws (fix before adding anything)
 
 ### 3.1 Checkpoints require standing on a spot — must become automatic crossing lines
+> ✅ **Fixed.** `LevelManager.updateCheckpoints` now activates on `playerPos.z <= trigger.z`
+> (furthest line crossed per frame, any x/height). `radius` dropped from `Level.ts`.
+> `kit.checkpointPad` (small ring) replaced with `kit.checkpointStrip(z, width, xCenter)` — a
+> full-width floor strip that brightens once crossed. Verified via headless test: a checkpoint
+> fired while 5–6 units off-center in the waiting room (well beyond the old 3-unit sphere).
 - **What's wrong:** [LevelManager.ts](src/world/LevelManager.ts) `updateCheckpoints()` activates
   a checkpoint only when `playerPos.distanceTo(trigger) <= radius` with `radius: 3` — a small
   sphere in the middle of the corridor. Hug a wall, weave between the seats, or jump through
@@ -75,6 +80,27 @@ simply walks away. The systems are production-grade; the *game built on them* is
   (brighter, color-shift) so crossing is visibly confirmed.
 
 ### 3.2 Respawns can place you on top of the enemy
+> ✅ **Fixed.** `Enemy.resetAwayFrom(respawnPos)` resets to the patrol waypoint furthest from
+> the respawn (replaces the blind `reset(enemySpawn)`). `Player.respawn(pos, faceYaw)` now
+> faces −z; `CameraRig.snapBehind(heading)` instantly re-seats the camera. Grace bumped to
+> 2.0 s after a *caught* death (`RESPAWN_GRACE_CAUGHT`) vs 1.6 s for fall/hazard.
+>
+> **Bonus finding while verifying this:** `Game.startRun()` never set the camera's initial yaw,
+> so a fresh run inherited whatever arbitrary angle the menu's orbiting camera left behind —
+> confirmed via a debug position readout, a player could press Play and immediately walk
+> *backward* into the spawn wall. Fixed by calling `cameraRig.snapBehind(RESPAWN_FACE_YAW)` in
+> `startRun()` too, not just on mid-run respawn.
+>
+> **Second bonus finding:** the third-person auto-trail (`CameraRig.update`) chased the
+> player's world-space facing every frame, which itself depends on the *current* camera yaw
+> for any input with a lateral component — a one-frame-delayed feedback loop with no stable
+> fixed point except pure-forward movement. Holding any diagonal or pure-strafe input caused
+> the camera (and effective move direction) to **spin continuously** for as long as the key was
+> held (confirmed empirically: a 900ms strafe-only burst rotated the effective heading enough
+> to move the player *backward* instead of sideways). Fixed by gating the auto-trail on the raw
+> local input (`Math.abs(input.move.x) < 0.5`, camera-independent) so it only engages on
+> mostly-forward/back movement — strafing now holds the camera still, matching standard
+> third-person convention, instead of spinning.
 - **What's wrong:** in [level01.ts](src/world/levels/level01.ts), checkpoint 2's respawn `pos`
   is `(0, 1.4, −20)` and `enemySpawn` is `(0, 1.4, −20)` — **identical coordinates**.
   `Game.respawn()` resets the enemy to `enemySpawn` at the same moment it respawns the player,
@@ -103,6 +129,9 @@ simply walks away. The systems are production-grade; the *game built on them* is
   The kit already supports this — it's authoring work in `levels/level0*.ts`, no engine change.
 
 ### 3.4 The enemy can never win a footrace
+> ✅ **Fixed.** Chase speeds raised to 4.5 / 5.5 / 6.5 (Easy/Normal/Nightmare) — between walk
+> (5.0) and sprint (8.5), so sprint is now the real escape verb. Added the suggested lunge
+> (×1.4 speed, 0.8 s, 4 s cooldown) while actively chasing in sight, in `Enemy.update()`.
 - **What's wrong:** chase speeds in [Difficulty.ts](src/core/Difficulty.ts) are 2.6 / 3.4 / 4.4
   — all **below** the player's *walking* speed of 5.0 ([Player.ts](src/engine/Player.ts)
   `walkSpeed`), let alone sprint (8.5). On every difficulty, calmly walking backward is a
@@ -179,7 +208,7 @@ of this document.
 | 7.3 | **Doors, hazards, keycard** | Silent auto-doors and spark poles break believability. | Door slide whoosh, spark-loop (sawtooth + crackle) attached to `sweepingHazard`, distinct keycard chime (current `select()` is reused for everything). | S |
 | 7.4 | **Win/lose stingers** | The biggest moments are silent. | Two 2-s procedural stingers (rising triad / dissonant fall). | S |
 | 7.5 | **Spatial audio** | Sound tells you *where* the threat is. | Howler is already a dependency but **unused** — either use its stereo API or Web Audio `PannerNode` for enemy/hazard sources. | M |
-| 7.6 | **Dead code / gaps** | `Audio.jump()` exists but is **never called** (jump is silent); ambience keeps playing on the pause screen and in hidden tabs. | Call `jump()` from the jump branch in `Game.updatePlay`; suspend the AudioContext on pause/`visibilitychange`. | S |
+| 7.6 | ✅ **Fixed** — dead code / gaps | `Audio.jump()` existed but was never called; ambience kept playing on the pause screen/hidden tabs. | `Player.consumeJustJumped()` now wired to `AudioEngine.jump()` in `Game.updatePlay`; `AudioEngine.suspend()` called from `App.pause()` (covers both paths — `visibilitychange`/`blur` already route through `pause()`). | S |
 | 7.7 | **Reverb** | Dry sound reads as "web demo". | One `ConvolverNode` with a generated impulse response (noise burst + decay), mixed subtly on the sfx bus. | S |
 
 ---
@@ -190,7 +219,7 @@ of this document.
 |---|---|---|---|---|
 | 8.1 | **No key remapping** — promised in [docs/PRD.md](docs/PRD.md) (F8) and About. | Accessibility + trust: the docs advertise it. | Settings → Controls: click-to-rebind rows writing a `keymap` into `Save`; `Input.ts` reads the map instead of literal codes. | M |
 | 8.2 | **No captions** for growl/heartbeat/steps — also promised (PRD a11y). | Deaf/HoH players lose the *only* threat telegraphs. | Caption line above the objective pill: "(low growl — it sees you)"; toggle in Settings. | S |
-| 8.3 | **Win screen hardcodes "Reception Wing"** — [UI.ts](src/ui/UI.ts) `showWin()` subtitle is a literal string, wrong on L2/L3. | Visible bug on every later wing. | Pass `levelName` into `showWin` (already passed to `showPause`). | S |
+| 8.3 | ✅ **Fixed** — win screen hardcoded "Reception Wing" | Visible bug on every later wing. | `UI.showWin` now takes a `levelName` param, wired from `App.handleWin` via `Game.getLevelName()`. | S |
 | 8.4 | **No best-time delta on win.** | "−2.3 s vs best" is the entire speedrun loop, for free. | Compare vs `Save.getBestTime(id)` *before* recording; show delta + "NEW BEST" state. | S |
 | 8.5 | **Controls hint vanishes forever** after 7 s. | New players who missed it have no recourse in-game. | Keep it until first successful jump *and* look; re-show for 3 s after respawn. | S |
 | 8.6 | **No save-reset** option. | Testers/streamers need a fresh start; today it means DevTools. | Settings → "Reset progress" with confirm step. | S |
@@ -230,15 +259,20 @@ Close the two ✗ items before calling the a11y story done.
 
 ## 12. Bugs & nits (quick kills, all S)
 
-1. `showWin()` subtitle hardcoded to "Reception Wing" ([UI.ts](src/ui/UI.ts)) — wrong on L2/L3.
-2. `Audio.jump()` defined, never called — jumps are silent.
-3. Ambient drone keeps playing on the pause screen and when the tab is hidden (suspend
-   AudioContext on pause/`visibilitychange`).
+1. ✅ `showWin()` subtitle hardcoded to "Reception Wing" — fixed, see §8.3.
+2. ✅ `Audio.jump()` defined, never called — fixed, see §7.6.
+3. ✅ Ambient drone kept playing on the pause screen / hidden tab — fixed, see §7.6.
 4. Fixed smoke-test selector: pause detection looks for an `h2` "Paused" that moved into the
    kicker (test-only, but keeps reporting a false negative).
 5. `.gitignore` has both `.vercel/` and a stray `.vercel` line (harmless duplication).
 6. First-person mode: exit beacon/signage `fog:false` materials render at full brightness even
    very far away — slightly cheap-looking; scale opacity by distance.
+7. ✅ **Found + fixed during verification:** a fresh run never set the camera's initial yaw, so
+   pressing Play could send the player walking backward into the spawn wall (leftover angle
+   from the menu's orbiting camera). See §3.2.
+8. ✅ **Found + fixed during verification:** the third-person auto-trail chased a target that
+   depended on its own current yaw for any non-forward input, causing the camera (and
+   effective movement direction) to spin continuously while strafing/diagonal-moving. See §3.2.
 
 ---
 
@@ -246,7 +280,7 @@ Close the two ✗ items before calling the a11y story done.
 
 | Priority | Items | Outcome |
 |---|---|---|
-| **P0** (next session) | 3.1 auto-checkpoints · 3.2 fair respawns · 3.4 chase speeds · 8.3 win-screen name · 12.2 jump sound | The two rage-quits are gone; the hunt is real |
+| **P0** | ✅ done — 3.1 auto-checkpoints · 3.2 fair respawns (+ camera start-facing & auto-trail-spin fixes found while verifying) · 3.4 chase speeds/lunge · 8.3 win-screen name · 7.6 jump sound & audio suspend | The two rage-quits are gone; the hunt is real |
 | **P1** (following passes) | 3.3 bigger wings ×3 · 3.5 slice finale · 7.1 footsteps · 7.2 music layers · 7.3 hazard/door sfx · 5.1 landmarks · 4.1 hide verb · 8.2 captions · 8.4 best-time delta | Stops feeling like a prototype |
 | **P2** | 4.2 collectibles · 4.6 stamina · 6.1 wall textures · 6.2 dust · 6.4 scarier enemy · 8.1 remapping · 8.7 gamepad · 9.x feel pack · 10.1 code-split | Feels like a finished small game |
 | **P3** | Wings 4–15 · full reward/escape sequence · rigged characters · leaderboards · PWA | The complete 15-wing vision |

@@ -162,12 +162,12 @@ export class UI {
   }
 
   // ---------------- Win / Fail ----------------
-  showWin(timeStr: string, deaths: number, hasNext: boolean) {
+  showWin(levelName: string, timeStr: string, deaths: number, hasNext: boolean) {
     this.clear();
     const panel = el('div', { class: 'panel center' }, [
       el('div', { class: 'kicker' }, ['✔ Wing Cleared']),
       el('h2', {}, ['You Escaped']),
-      el('div', { class: 'subtitle' }, ['Reception Wing']),
+      el('div', { class: 'subtitle' }, [levelName]),
       el('div', { class: 'result-grid' }, [
         el('div', { class: 'r-label' }, ['Time']), el('div', { class: 'r-value' }, [timeStr]),
         el('div', { class: 'r-label' }, ['Deaths']), el('div', { class: 'r-value' }, [String(deaths)]),

@@ -3,8 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 
 export interface Checkpoint {
   pos: THREE.Vector3;   // respawn position
-  trigger: THREE.Vector3; // world position of the pass-through volume centre
-  radius: number;
+  trigger: THREE.Vector3; // world position; .z is the crossing line (any x/y counts)
 }
 
 export interface LevelConfig {

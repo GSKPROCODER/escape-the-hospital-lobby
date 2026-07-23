@@ -24,10 +24,13 @@ export class Enemy {
   private brain: EnemyBrain;
 
   private cfg: DifficultyConfig['enemy'];
+  private patrol: THREE.Vector3[];
   private facing = 0;
   private vy = 0;
   private active = false;
   private seen = false;
+  private lungeTimer = 0;
+  private lungeCooldown = 0;
 
   constructor(
     private scene: THREE.Scene,
@@ -37,6 +40,7 @@ export class Enemy {
     patrol: THREE.Vector3[]
   ) {
     this.cfg = cfg;
+    this.patrol = patrol;
     this.scene.add(this.model.root);
     this.model.setVisible(false);
 
@@ -58,6 +62,7 @@ export class Enemy {
 
   setConfig(cfg: DifficultyConfig['enemy'], patrol: THREE.Vector3[]) {
     this.cfg = cfg;
+    this.patrol = patrol;
     this.brain.setConfig({
       patrolSpeed: cfg.patrolSpeed,
       chaseSpeed: cfg.chaseSpeed,
@@ -70,7 +75,25 @@ export class Enemy {
     this.body.setNextKinematicTranslation({ x: spawn.x, y: spawn.y, z: spawn.z });
     this.vy = 0;
     this.seen = false;
+    this.lungeTimer = 0;
+    this.lungeCooldown = 0;
     this.brain.reset({ x: spawn.x, z: spawn.z });
+  }
+
+  /**
+   * Fair respawn: reset to the patrol waypoint FURTHEST from where the
+   * player just respawned, instead of blindly to `enemySpawn` — prevents
+   * spawn-camping when a checkpoint happens to sit near the enemy's spawn.
+   */
+  resetAwayFrom(respawnPos: THREE.Vector3) {
+    if (this.patrol.length === 0) { this.reset(respawnPos); return; }
+    let best = this.patrol[0];
+    let bestDist = -1;
+    for (const wp of this.patrol) {
+      const d = wp.distanceTo(respawnPos);
+      if (d > bestDist) { bestDist = d; best = wp; }
+    }
+    this.reset(best);
   }
 
   setActive(v: boolean) {
@@ -127,7 +150,17 @@ export class Enemy {
     const grounded = this.controller.computedGrounded();
     if (grounded) this.vy = Math.max(this.vy, -2);
 
-    const speed = out.speed;
+    // Occasional lunge while actively chasing in sight — a real burst of
+    // speed so a fleeing player must actually evade, not just outwalk it.
+    this.lungeCooldown = Math.max(0, this.lungeCooldown - dt);
+    if (out.state === 'chase' && canSee && this.lungeTimer <= 0 && this.lungeCooldown <= 0) {
+      this.lungeTimer = 0.8;
+      this.lungeCooldown = 4.0;
+    }
+    if (this.lungeTimer > 0) this.lungeTimer -= dt;
+    const lungeMult = this.lungeTimer > 0 ? 1.4 : 1;
+
+    const speed = out.speed * lungeMult;
     const desired = new THREE.Vector3(dir.x * speed * dt, this.vy * dt, dir.z * speed * dt);
     this.controller.computeColliderMovement(this.collider, desired);
     const mv = this.controller.computedMovement();

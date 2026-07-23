@@ -11,7 +11,9 @@ import { DifficultyId, DIFFICULTIES } from '../core/Difficulty';
 import { Enemy } from '../ai/Enemy';
 
 const MENU_FOCUS = new THREE.Vector3(0, 1, -3);
-const RESPAWN_GRACE = 1.6; // seconds of catch-immunity after a respawn
+const RESPAWN_GRACE = 1.6;          // seconds of catch-immunity after a fall/hazard respawn
+const RESPAWN_GRACE_CAUGHT = 2.0;   // longer grace after being caught — a caught death shouldn't chain
+const RESPAWN_FACE_YAW = Math.PI;   // atan2(vx,vz) convention: faces -z, toward the objective
 
 /**
  * Owns the 3D world and stepping. App decides which update to call
@@ -109,6 +111,7 @@ export class Game {
 
     const landed = this.player.consumeJustLanded();
     if (landed) this.audio.land();
+    if (this.player.consumeJustJumped()) this.audio.jump();
 
     // Enemy hunt
     const noise = (this.input.sprint && moving) || landed;
@@ -147,9 +150,11 @@ export class Game {
       this.lives--;
       if (this.lives <= 0) { this.finished = true; this.onFail?.(); return; }
     }
-    this.player.respawn(this.levels.getSpawnPosition());
-    this.enemy.reset(this.levels.getEnemySpawn());
-    this.graceTimer = RESPAWN_GRACE;
+    const spawnPos = this.levels.getSpawnPosition();
+    this.player.respawn(spawnPos, RESPAWN_FACE_YAW);
+    this.enemy.resetAwayFrom(spawnPos);
+    this.cameraRig.snapBehind(RESPAWN_FACE_YAW);
+    this.graceTimer = costLife ? RESPAWN_GRACE_CAUGHT : RESPAWN_GRACE;
   }
 
   render(alpha: number) {
@@ -169,9 +174,16 @@ export class Game {
 
     this.levels.resetProgress();
     this.enemy.setConfig(cfg.enemy, this.levels.getPatrol());
-    this.player.respawn(this.levels.getSpawnPosition());
+    const spawnPos = this.levels.getSpawnPosition();
+    this.player.respawn(spawnPos, RESPAWN_FACE_YAW);
     this.enemy.reset(this.levels.getEnemySpawn());
     this.enemy.setActive(true);
+    // The menu's orbiting camera leaves an arbitrary yaw behind; without this,
+    // the third-person auto-trail (which follows wherever the player is
+    // *already* moving) can lock onto a wrong direction from frame one with
+    // no way to self-correct. Always start a run facing the level, not
+    // whatever direction the menu camera happened to end on.
+    this.cameraRig.snapBehind(RESPAWN_FACE_YAW);
   }
 
   stopEnemy() { this.enemy.setActive(false); }

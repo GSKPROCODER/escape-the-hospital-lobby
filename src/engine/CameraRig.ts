@@ -38,6 +38,16 @@ export class CameraRig {
   getYaw(): number { return this.yaw; }
 
   /**
+   * Instantly re-seat the camera behind the player facing `heading` (used on
+   * respawn so a stale camera angle never adds insult to a fresh death).
+   */
+  snapBehind(heading: number) {
+    this.yaw = heading + Math.PI;
+    this.pitch = 0.16;
+    this.initialised = false;
+  }
+
+  /**
    * @param heading  player facing yaw (atan2(vx,vz))
    * @param moving   true when the player has meaningful horizontal speed
    */
@@ -48,6 +58,14 @@ export class CameraRig {
     this.pitch = Math.max(this.PITCH_MIN, Math.min(this.PITCH_MAX, this.pitch));
 
     const manualLook = Math.abs(input.lookDelta.x) > 1e-4;
+    // Only auto-trail on mostly-forward/back input. The target heading is the
+    // player's WORLD-space facing, which itself depends on the CURRENT camera
+    // yaw for any input with a lateral component — chasing it during a strafe
+    // creates a one-frame-delayed feedback loop with no stable fixed point
+    // except pure-forward, so any held diagonal/strafe spins the camera
+    // (and effective move direction) continuously. Gating on the RAW local
+    // input (camera-independent) breaks the loop entirely.
+    const forwardDominant = Math.abs(input.move.x) < 0.5;
 
     // ---- First person ----
     if (this.mode === 'first') {
@@ -63,7 +81,7 @@ export class CameraRig {
 
     // ---- Third person ----
     // Gentle auto-trail: swing behind the direction of travel when not manually looking.
-    if (!manualLook && moving) {
+    if (!manualLook && moving && forwardDominant) {
       const target = heading + Math.PI; // behind the character
       this.yaw = lerpAngle(this.yaw, target, 1 - Math.exp(-dt * 2.2));
     }

@@ -38,6 +38,12 @@ interface Keycard {
   mesh: THREE.Group;
   collected: boolean;
 }
+interface CheckpointStrip {
+  z: number;
+  mesh: THREE.Mesh;
+  mat: THREE.MeshBasicMaterial;
+  activated: boolean;
+}
 
 const PLAYER_PAD = new THREE.Vector3(0.4, 0, 0.4);
 
@@ -49,6 +55,7 @@ export class LevelKit {
   private doors: Door[] = [];
   private lights: FlickerLight[] = [];
   private keycard: Keycard | null = null;
+  private checkpointStrips: CheckpointStrip[] = [];
 
   private pickupEvent = false;
   private exitMesh: THREE.Mesh | null = null;
@@ -268,14 +275,19 @@ export class LevelKit {
     this.scene.add(this.beaconLight); this.meshes.push(this.beaconLight);
   }
 
-  /** Glowing floor ring marking a checkpoint. */
-  checkpointPad(x: number, z: number) {
-    const mat = new THREE.MeshBasicMaterial({ color: 0x35e0c8, transparent: true, opacity: 0.5, depthWrite: false, fog: false });
+  /**
+   * A full-width glowing floor strip marking a checkpoint LINE (matches the
+   * crossing-line activation in LevelManager — any x/height crossing it
+   * counts, not just standing on a spot). Brightens once the player crosses.
+   */
+  checkpointStrip(z: number, width: number, xCenter = 0) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x35e0c8, transparent: true, opacity: 0.32, depthWrite: false, fog: false });
     this.disposables.push(mat);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.15, 24), mat);
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.set(x, 0.06, z);
-    this.scene.add(ring); this.meshes.push(ring); this.disposables.push(ring.geometry);
+    const strip = new THREE.Mesh(new THREE.PlaneGeometry(width, 1.0), mat);
+    strip.rotation.x = -Math.PI / 2;
+    strip.position.set(xCenter, 0.05, z);
+    this.scene.add(strip); this.meshes.push(strip); this.disposables.push(strip.geometry);
+    this.checkpointStrips.push({ z, mesh: strip, mat, activated: false });
   }
 
   // ---------- runtime ----------
@@ -316,6 +328,15 @@ export class LevelKit {
     if (this.beaconMat && !reducedMotion) {
       this.beaconMat.opacity = 0.22 + 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 2.5));
     }
+    // Checkpoint strips brighten once crossed — purely visual confirmation,
+    // independent of LevelManager's own (authoritative) crossing check.
+    for (const cp of this.checkpointStrips) {
+      if (!cp.activated && playerPos.z <= cp.z) {
+        cp.activated = true;
+        cp.mat.opacity = 0.8;
+        cp.mat.color.setHex(0x9ff5e2);
+      }
+    }
     // Lights flicker (subtle)
     for (const fl of this.lights) {
       let f = 1;
@@ -351,7 +372,7 @@ export class LevelKit {
     this.bodies.forEach(b => this.world.removeRigidBody(b));
     this.bodies.length = 0;
     this.hazards.length = 0; this.doors.length = 0; this.lights.length = 0;
-    this.keycard = null; this.exitMesh = null;
+    this.keycard = null; this.exitMesh = null; this.checkpointStrips.length = 0;
     this.disposables.forEach(d => d.dispose());
     this.disposables.length = 0;
   }

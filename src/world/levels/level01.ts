@@ -16,9 +16,9 @@ export const level01: LevelConfig = {
   fallY: -8,
 
   checkpoints: [
-    { pos: new THREE.Vector3(0, 1.4, -6), trigger: new THREE.Vector3(0, 1, -6), radius: 3 },
-    { pos: new THREE.Vector3(0, 1.4, -20), trigger: new THREE.Vector3(0, 1, -18), radius: 3 },
-    { pos: new THREE.Vector3(0, 1.4, -35), trigger: new THREE.Vector3(0, 1, -35), radius: 3 },
+    { pos: new THREE.Vector3(0, 1.4, -6), trigger: new THREE.Vector3(0, 1, -6) },
+    { pos: new THREE.Vector3(0, 1.4, -20), trigger: new THREE.Vector3(0, 1, -18) },
+    { pos: new THREE.Vector3(0, 1.4, -35), trigger: new THREE.Vector3(0, 1, -35) },
   ],
   winZone: { pos: new THREE.Vector3(0, 1.5, -43.5), radius: 3 },
   enemySpawn: new THREE.Vector3(0, 1.4, -20),
@@ -67,8 +67,8 @@ export const level01: LevelConfig = {
     k.room(0, -40, 12, 10, { doors: ['n'], doorW: 4, light: 26 });
     k.exitDoor(0, 2.2, -44.7, false); // unlocked
 
-    // Checkpoint markers
-    k.checkpointPad(0, -6); k.checkpointPad(0, -18); k.checkpointPad(0, -35);
+    // Checkpoint lines (full-width — any x/height crossing counts)
+    k.checkpointStrip(-6, 4); k.checkpointStrip(-18, 14); k.checkpointStrip(-35, 4);
   },
 
   update: (dt, elapsed, rm, playerPos) => kit?.update(dt, elapsed, rm, playerPos),

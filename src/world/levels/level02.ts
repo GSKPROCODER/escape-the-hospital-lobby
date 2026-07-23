@@ -14,8 +14,8 @@ export const level02: LevelConfig = {
   fallY: -8,
 
   checkpoints: [
-    { pos: new THREE.Vector3(0, 1.4, -4), trigger: new THREE.Vector3(0, 1, -3), radius: 3 },
-    { pos: new THREE.Vector3(0, 1.4, -12), trigger: new THREE.Vector3(0, 1, -12), radius: 3.5 },
+    { pos: new THREE.Vector3(0, 1.4, -4), trigger: new THREE.Vector3(0, 1, -3) },
+    { pos: new THREE.Vector3(0, 1.4, -12), trigger: new THREE.Vector3(0, 1, -12) },
   ],
   winZone: { pos: new THREE.Vector3(0, 1.5, -21), radius: 3 },
   enemySpawn: new THREE.Vector3(-6, 1.4, -17),
@@ -57,7 +57,7 @@ export const level02: LevelConfig = {
     k.sign(0, 3.7, -21.4);
     k.wheelchair(-8, -4, 1);
 
-    k.checkpointPad(0, -3); k.checkpointPad(0, -12);
+    k.checkpointStrip(-3, 18); k.checkpointStrip(-12, 18);
   },
 
   update: (dt, elapsed, rm, playerPos) => kit?.update(dt, elapsed, rm, playerPos),

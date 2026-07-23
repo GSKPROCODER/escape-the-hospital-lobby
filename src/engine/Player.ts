@@ -20,6 +20,7 @@ export class Player {
   private jumpBufferTimer = 0;
   private wasGrounded = true;
   private justLanded = false;
+  private justJumped = false;
   private readonly COYOTE_TIME = 0.15;
   private readonly JUMP_BUFFER = 0.15;
 
@@ -79,6 +80,7 @@ export class Player {
       this.velocity.y = this.jumpForce;
       this.jumpBufferTimer = 0;
       this.coyoteTimer = 0;
+      this.justJumped = true;
     }
 
     // Solve movement against colliders
@@ -118,9 +120,14 @@ export class Player {
     this.model.root.position.set(pos.x, pos.y - 0.29, pos.z);
   }
 
-  respawn(pos: THREE.Vector3) {
+  /** @param faceYaw  if given, snap the character (and animation) to face this yaw. */
+  respawn(pos: THREE.Vector3, faceYaw?: number) {
     this.body.setNextKinematicTranslation({ x: pos.x, y: pos.y, z: pos.z });
     this.velocity.set(0, 0, 0);
+    if (faceYaw !== undefined) {
+      this.facingYaw = faceYaw;
+      this.model.root.rotation.y = faceYaw;
+    }
   }
 
   getPosition(): THREE.Vector3 {
@@ -132,6 +139,7 @@ export class Player {
   getFacing(): number { return this.facingYaw; }
   isGrounded(): boolean { return this.grounded; }
   consumeJustLanded(): boolean { const v = this.justLanded; this.justLanded = false; return v; }
+  consumeJustJumped(): boolean { const v = this.justJumped; this.justJumped = false; return v; }
   setModelVisible(v: boolean) { this.model.setVisible(v); }
 }
 
