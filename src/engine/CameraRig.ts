@@ -10,7 +10,7 @@ import { CameraMode } from '../core/Settings';
 export class CameraRig {
   private yaw = Math.PI;
   private pitch = 0.16;
-  private distance = 4.6;
+  private distance = 2.8;
   private mode: CameraMode = 'third';
 
   private readonly lookAt = new THREE.Vector3();     // chest target
@@ -20,7 +20,7 @@ export class CameraRig {
 
   private readonly PITCH_MIN = -0.55;
   private readonly PITCH_MAX = 0.95;
-  private readonly THIRD_DIST = 4.6;
+  private readonly THIRD_DIST = 2.8;
   private readonly TP_HEIGHT = 1.15;   // look-at height above body centre
   private readonly FP_EYE = 0.75;      // eye height above body centre
 

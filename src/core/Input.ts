@@ -29,13 +29,6 @@ export class InputState {
   private touchMove = { x: 0, z: 0 };
   private jumpReleaseTimer: number | null = null;
 
-  // Keys we handle — always prevent their browser defaults while enabled.
-  private readonly HANDLED = new Set([
-    'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyF', 'KeyP',
-    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-    'Space', 'ShiftLeft', 'ShiftRight',
-  ]);
-
   constructor(private container: HTMLElement) {
     this.setupKeyboard();
     this.setupMouse();
