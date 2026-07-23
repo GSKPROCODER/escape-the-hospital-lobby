@@ -1,0 +1,31 @@
+{
+  "name": "sharma-shine",
+  "version": "1.0.0",
+  "description": "A horror-themed **3D escape lobby** for the web. You wake up trapped in an abandoned, haunted hospital and must clear **15 unique levels** — each a distinct obstacle, hazard, or puzzle — to reach the exit, **escape**, and claim a **special reward**. Plays in any modern browser, on **desktop and mobile**, with no install and no login.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.3",
+    "howler": "^2.2.4",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/howler": "^2.2.13",
+    "@types/three": "^0.185.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  }
+}
