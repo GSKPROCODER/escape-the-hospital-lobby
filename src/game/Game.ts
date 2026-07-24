@@ -9,6 +9,7 @@ import { AudioEngine } from '../core/Audio';
 import { GameSettings } from '../core/Settings';
 import { DifficultyId, DIFFICULTIES } from '../core/Difficulty';
 import { Enemy } from '../ai/Enemy';
+import { MusicLevel } from '../core/Audio';
 
 const MENU_FOCUS = new THREE.Vector3(0, 1, -3);
 const RESPAWN_GRACE = 1.6;          // seconds of catch-immunity after a fall/hazard respawn
@@ -37,6 +38,7 @@ export class Game {
   private deaths = 0;
   private graceTimer = 0;
   private finished = false;  // won or failed this run
+  private lastMusicLevel: MusicLevel = 'calm';
 
   // Event callbacks (set by App)
   onWin: (() => void) | null = null;
@@ -112,21 +114,36 @@ export class Game {
     const landed = this.player.consumeJustLanded();
     if (landed) this.audio.land();
     if (this.player.consumeJustJumped()) this.audio.jump();
+    if (this.player.consumeStepEvent()) this.audio.footstepPlayer();
 
     // Enemy hunt
     const noise = (this.input.sprint && moving) || landed;
     this.enemy.update(dt, { playerPos: this.player.getPosition(), noise });
+    if (this.enemy.consumeStepEvent()) {
+      this.audio.footstepEnemy(this.player.getPosition().distanceTo(this.enemy.getPosition()));
+    }
+
+    // Music intensity follows the hunt's actual state, not just "seen" —
+    // investigate/search read as tension, chase as chase, everything else calm.
+    const brainState = this.enemy.getState();
+    const musicLevel: MusicLevel = brainState === 'chase' ? 'chase'
+      : (brainState === 'investigate' || brainState === 'search') ? 'tension' : 'calm';
+    if (musicLevel !== this.lastMusicLevel) {
+      this.audio.setIntensity(musicLevel);
+      this.lastMusicLevel = musicLevel;
+    }
 
     // Level dynamics (doors, sweeping hazards, keycard) — needs player position.
     this.levels.update(dt, this.elapsed, this.reducedMotion, this.player.getPosition());
-    if (this.levels.consumePickup()) { this.audio.select(); this.onPickup?.(); }
+    if (this.levels.consumePickup()) { this.audio.keycard(); this.onPickup?.(); }
+    for (const opening of this.levels.consumeDoorToggles()) this.audio.doorSlide(opening);
 
     if (!this.finished) {
       const playerPos = this.player.getPosition();
 
       // Checkpoints
       const cp = this.levels.updateCheckpoints(playerPos);
-      if (cp >= 0) { this.audio.select(); this.onCheckpoint?.(); }
+      if (cp >= 0) { this.audio.checkpoint(); this.onCheckpoint?.(); }
 
       // Win (gated by canExit — e.g. keycard)
       if (this.levels.checkWin(playerPos)) { this.finished = true; this.onWin?.(); }
@@ -150,6 +167,7 @@ export class Game {
     this.deaths++;
     this.onDeath?.(kind);
     if (costLife) this.audio.growl();
+    else if (kind === 'hazard') this.audio.hazardZap();
     else this.audio.land();
     if (costLife && this.lives > 0) {
       this.lives--;
@@ -183,6 +201,8 @@ export class Game {
     this.player.respawn(spawnPos, RESPAWN_FACE_YAW);
     this.enemy.reset(this.levels.getEnemySpawn());
     this.enemy.setActive(true);
+    this.lastMusicLevel = 'calm';
+    this.audio.setIntensity('calm');
     // The menu's orbiting camera leaves an arbitrary yaw behind; without this,
     // the third-person auto-trail (which follows wherever the player is
     // *already* moving) can lock onto a wrong direction from frame one with

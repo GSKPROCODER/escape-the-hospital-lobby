@@ -82,5 +82,6 @@ export const level03: LevelConfig = {
   canExit: () => kit?.canExit() ?? true,
   objective: () => 'Reach the ward exit — mind the doors',
   consumePickup: () => kit?.consumePickup() ?? false,
+  consumeDoorToggles: () => kit?.consumeDoorToggles() ?? [],
   destroy: () => { kit?.dispose(); kit = null; },
 };

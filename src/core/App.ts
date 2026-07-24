@@ -214,6 +214,7 @@ export class App {
 
   private handleWin() {
     this.freezeAfterRun();
+    this.audio.winSting();
     const idx = this.game.getLevelIndex();
     this.save.recordBestTime(this.game.getLevelId(), this.game.getPlayTime());
     this.save.unlockLevel(idx + 1);
@@ -223,6 +224,7 @@ export class App {
 
   private handleFail() {
     this.freezeAfterRun();
+    this.audio.loseSting();
     this.ui.showFail();
   }
 

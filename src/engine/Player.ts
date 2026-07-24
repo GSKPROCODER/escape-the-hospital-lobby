@@ -21,6 +21,7 @@ export class Player {
   private wasGrounded = true;
   private justLanded = false;
   private justJumped = false;
+  private stepEvent = false;
   private readonly COYOTE_TIME = 0.15;
   private readonly JUMP_BUFFER = 0.15;
 
@@ -112,6 +113,7 @@ export class Player {
       grounded: this.grounded,
       vy: this.velocity.y,
     });
+    if (this.model.consumeStepEvent()) this.stepEvent = true;
   }
 
   updateRender(_alpha: number) {
@@ -140,6 +142,7 @@ export class Player {
   isGrounded(): boolean { return this.grounded; }
   consumeJustLanded(): boolean { const v = this.justLanded; this.justLanded = false; return v; }
   consumeJustJumped(): boolean { const v = this.justJumped; this.justJumped = false; return v; }
+  consumeStepEvent(): boolean { const v = this.stepEvent; this.stepEvent = false; return v; }
   setModelVisible(v: boolean) { this.model.setVisible(v); }
 }
 

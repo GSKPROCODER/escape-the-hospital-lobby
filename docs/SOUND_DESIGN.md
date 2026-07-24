@@ -1,13 +1,17 @@
 # Sound Design — Escape the Hospital Lobby
 
-> **Status:** Design doc, not yet implemented (tracked as [BETTERMENT.md](../BETTERMENT.md) §7).
+> **Status:** Design doc — **P0 and P1 now implemented** (tracked as
+> [BETTERMENT.md](../BETTERMENT.md) §7); P2/P3 (spatial panning, reverb, sample packs) remain
+> design-only below.
 > **Purpose:** A complete, production-grade horror sound bible — pillars, mix architecture,
 > global systems, a master SFX list, and a per-wing soundscape for all 15 wings — with real,
 > license-checked sources so this can be executed without further research.
 >
 > **Current state:** [src/core/Audio.ts](../src/core/Audio.ts) is 100% procedural Web Audio
-> (oscillators + filtered noise) — a drone, UI blips, a growl, and a heartbeat. No footsteps,
-> no samples, no spatialization, no music layers. This doc is the plan to fix that.
+> (oscillators + filtered noise) — a drone with a 3-layer calm/tension/chase intensity system,
+> footsteps (player + distance-attenuated enemy), a growl, a heartbeat, and distinct
+> keycard/checkpoint/door/hazard/win/lose sounds. No samples, no spatialization/reverb yet
+> (P2/P3) — those are the design-only sections below.
 
 ---
 
@@ -123,22 +127,22 @@ the eventual `.ogg` versions.
 | ui_hover | menu hover blip | `UI.button` mouseenter → `AudioEngine.hover()` | Proc ✅ | Kenney UI Audio | — |
 | ui_click | menu confirm | `AudioEngine.click()` | Proc ✅ | Kenney UI Audio | — |
 | ui_back | menu back/cancel | new — Settings/Pause "Back" | Proc | Kenney UI Audio | 10 KB |
-| sfx_jump | player leaves ground | `Player` jump branch → `AudioEngine.jump()` (defined, **never called** — BETTERMENT §12.2) | Proc ✅ (wire it) | — | — |
+| sfx_jump | player leaves ground | `Player` jump branch → `AudioEngine.jump()` (defined, **never called** — BETTERMENT §12.2) | Proc ✅ | — | — |
 | sfx_land | player lands | `consumeJustLanded()` → `AudioEngine.land()` | Proc ✅ | Freesound "footstep_land" CC0 | 15 KB |
-| sfx_step_tile | player footstep, tile floor | gait-phase half-cycle (§4.1) | Proc (new) | Kenney Impact Sounds | 8 KB ×4 |
-| sfx_step_metal | footstep, metal grate/stairs | gait-phase, `surface:'metal'` | Proc (new) | Kenney Impact Sounds | 8 KB ×4 |
-| sfx_step_water | footstep, flooded basement | gait-phase, `surface:'water'` | Proc (new) | Freesound "water splash step" CC0 | 10 KB ×3 |
-| sfx_enemy_step | enemy footstep | `EnemyModel` gait phase | Proc (new, heavier/lower) | Kenney Impact Sounds | 8 KB ×4 |
+| sfx_step_tile | player footstep, tile floor | gait-phase half-cycle (§4.1) | Proc ✅ | Kenney Impact Sounds | 8 KB ×4 |
+| sfx_step_metal | footstep, metal grate/stairs | gait-phase, `surface:'metal'` | Proc ✅ | Kenney Impact Sounds | 8 KB ×4 |
+| sfx_step_water | footstep, flooded basement | gait-phase, `surface:'water'` | Proc ✅ | Freesound "water splash step" CC0 | 10 KB ×3 |
+| sfx_enemy_step | enemy footstep | `EnemyModel` gait phase | Proc ✅ | Kenney Impact Sounds | 8 KB ×4 |
 | sfx_growl | enemy spots player | `AudioEngine.growl()` | Proc ✅ | — | — |
 | sfx_breathing | enemy near-proximity loop | new, `Enemy` distance check | Proc (new) | Freesound "creature breathing" CC0 | 40 KB |
 | sfx_heartbeat | seen-state pulse | `AudioEngine.heartbeat()` | Proc ✅ | — | — |
 | sfx_wail_distant | rare atmosphere sting | new, random timer | Proc (new) | OpenGameArt Horror SFX Library | 60 KB |
-| sfx_checkpoint | checkpoint crossed | `Game.onCheckpoint` → `AudioEngine.select()` (reused — should be distinct, §4.4) | Proc ✅ (differentiate) | — | — |
-| sfx_keycard | keycard picked up | `Game.onPickup` (currently reuses `select()`) | Proc (new, distinct) | Kenney UI Audio "chime" | 12 KB |
-| sfx_door_open | auto-door opens | `kit.autoDoor` phase 0→1 | Proc (new) | Freesound "metal door slide" CC0 | 30 KB |
-| sfx_door_close | auto-door closes | `kit.autoDoor` phase 1→0 | Proc (new) | same source, reversed/pitched | 30 KB |
+| sfx_checkpoint | checkpoint crossed | `Game.onCheckpoint` → `AudioEngine.select()` (reused — should be distinct, §4.4) | Proc ✅ | — | — |
+| sfx_keycard | keycard picked up | `Game.onPickup` (currently reuses `select()`) | Proc ✅ | Kenney UI Audio "chime" | 12 KB |
+| sfx_door_open | auto-door opens | `kit.autoDoor` phase 0→1 | Proc ✅ | Freesound "metal door slide" CC0 | 30 KB |
+| sfx_door_close | auto-door closes | `kit.autoDoor` phase 1→0 | Proc ✅ | same source, reversed/pitched | 30 KB |
 | sfx_spark_loop | sweeping hazard active | `kit.sweepingHazard` | Proc (new, sawtooth+crackle) | Freesound "electrical arc loop" CC0 | 80 KB |
-| sfx_hazard_zap | hazard tile hit | `hazardHit()` respawn branch | Proc (new) | Freesound "electric shock" CC0 | 15 KB |
+| sfx_hazard_zap | hazard tile hit | `hazardHit()` respawn branch | Proc ✅ | Freesound "electric shock" CC0 | 15 KB |
 | sfx_slip | player enters slippery floor (Morgue) | new level flag | Proc (new, low friction whoosh) | — | — |
 | sfx_splash | player enters water (Flooded Basement) | new level flag | Proc (new) | Freesound "wading water" CC0 | 40 KB |
 | sfx_steam_burst | Boiler Room hazard | new (Wing 11) | Proc (new, noise burst + hiss) | Freesound "steam hiss" CC0 | 30 KB |
@@ -150,14 +154,14 @@ the eventual `.ogg` versions.
 | sfx_cart_roll | Operating Theatre cart (Wing 9) | new | Proc (new, squeaky wheel) | Freesound "squeaky cart" CC0 | 20 KB |
 | sfx_exit_hum | exit beacon proximity drone | new, distance-based | Proc (new) | — | — |
 | sfx_exit_unlock | `canExit()` flips true | `LevelKit.update` unlock branch | Proc (new, rising chime) | — | — |
-| sting_win | wing cleared | `App.handleWin` → `UI.showWin` | Proc (new, rising triad) | — | — |
-| sting_caught | player runs out of lives | `App.handleFail` → `UI.showFail` | Proc (new, falling dissonant) | — | — |
+| sting_win | wing cleared | `App.handleWin` → `UI.showWin` | Proc ✅ | — | — |
+| sting_caught | player runs out of lives | `App.handleFail` → `UI.showFail` | Proc ✅ | — | — |
 | sting_checkpoint_final | last checkpoint before exit | new | Proc (new) | — | — |
 | ui_pause_in | pause menu opens | `App.pause()` | Proc (new, soft low-pass sweep on world audio) | — | — |
 | ui_pause_out | resume | `App.resume()` | Proc (new, reverse sweep) | — | — |
 | music_calm | ambient bed | `AudioEngine.startAmbient()` | Proc ✅ | — | — |
-| music_tension | pulse layer | new (§4.2) | Proc (new) | — | — |
-| music_chase | percussive layer | new (§4.2) | Proc (new) | Sonniss GDC bundle percussion one-shots | 100 KB (loopable) |
+| music_tension | pulse layer | new (§4.2) | Proc ✅ | — | — |
+| music_chase | percussive layer | new (§4.2) | Proc ✅ | Sonniss GDC bundle percussion one-shots | 100 KB (loopable) |
 | amb_wing01_reception | Reception Wing room tone | wing load | Proc (drone variant) | OpenGameArt "Office horror ambience" | 200 KB |
 | amb_wing02_records | Records Room tone (paper rustle) | wing load | Proc (new) | Freesound "paper rustle loop" CC0 | 60 KB |
 | amb_wing03_ward | Ward A tone (monitor beep, distant) | wing load | Proc (new) | Freesound "hospital monitor beep" CC0 | 10 KB |
@@ -315,7 +319,7 @@ Matches [docs/LEVELS.md](./LEVELS.md). Each entry: **ambience bed** · **spot so
 
 | Phase | Scope | BETTERMENT ref |
 |---|---|---|
-| **P0** | Wire the two dead calls: `AudioEngine.jump()` and AudioContext-suspend on pause/hidden-tab | §12.2, §12.3 |
-| **P1** | Footsteps (player + enemy, procedural), 3-layer music intensity, distinct keycard/checkpoint/door/hazard sounds — all procedural, zero new asset weight | §7.1–§7.4 |
+| **P0** | ✅ done — wired `AudioEngine.jump()` and AudioContext-suspend on pause/hidden-tab | §12.2, §12.3 |
+| **P1** | ✅ done — footsteps (player + enemy, gait-phase driven, distance-attenuated on the enemy), 3-layer music intensity (`AudioEngine.setIntensity()` crossfading calm/tension/chase buses, driven by `EnemyBrain` state), distinct `keycard()`/`checkpoint()`/`hazardZap()`/`doorSlide()` sounds (previously all shared one generic `select()`), and `winSting()`/`loseSting()` — all procedural, zero new asset weight | §7.1–§7.4 |
 | **P2** | Spatial panning (`PannerNode`/Howler), generated-IR reverb + LOS occlusion, first real sample pack pull (Kenney + Freesound CC0 picks from §5/§6), per-wing ambience beds for wings 4–15 as they're built | §7.5–§7.7 |
 | **P3** | Full 15-wing sample pass, optional wing-intro VO (ties to [LORE.md](./LORE.md) §7), mastering pass (loudness normalization across all buses) | — |

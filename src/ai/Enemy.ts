@@ -31,6 +31,7 @@ export class Enemy {
   private seen = false;
   private lungeTimer = 0;
   private lungeCooldown = 0;
+  private stepEvent = false;
 
   constructor(
     private scene: THREE.Scene,
@@ -103,6 +104,7 @@ export class Enemy {
 
   isSeen(): boolean { return this.seen; }
   getState() { return this.brain.state; }
+  consumeStepEvent(): boolean { const v = this.stepEvent; this.stepEvent = false; return v; }
 
   getPosition(): THREE.Vector3 {
     const p = this.body.translation();
@@ -171,6 +173,7 @@ export class Enemy {
     this.model.root.position.set(np.x, np.y, np.z);
     this.model.root.rotation.y = this.facing;
     this.model.update(dt, dir.lengthSq() > 0 ? speed : 0, out.intensity);
+    if (this.model.consumeStepEvent()) this.stepEvent = true;
   }
 
   // FOV + range + Rapier line-of-sight (walls block)

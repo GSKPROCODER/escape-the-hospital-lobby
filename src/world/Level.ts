@@ -28,4 +28,6 @@ export interface LevelConfig {
   objective?: () => string;
   /** Returns true once when a pickup (keycard) was just collected. */
   consumePickup?: () => boolean;
+  /** Drains door open/close events since the last call (true = opening). */
+  consumeDoorToggles?: () => boolean[];
 }

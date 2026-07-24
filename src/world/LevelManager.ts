@@ -74,6 +74,10 @@ export class LevelManager {
     return this.currentLevel?.consumePickup?.() ?? false;
   }
 
+  consumeDoorToggles(): boolean[] {
+    return this.currentLevel?.consumeDoorToggles?.() ?? [];
+  }
+
   getObjective(): string {
     return this.currentLevel?.objective?.() ?? 'Reach the exit — don’t get caught';
   }

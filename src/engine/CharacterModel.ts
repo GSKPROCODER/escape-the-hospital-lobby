@@ -30,6 +30,8 @@ export class CharacterModel {
   private gaitPhase = 0;
   private idleT = 0;
   private airBlend = 0; // 0 grounded .. 1 airborne
+  private stepEvent = false;
+  private lastStepCycle = -1;
 
   constructor() {
     const skin = new THREE.MeshStandardMaterial({ color: 0xc9b8a5, roughness: 0.8 });
@@ -114,6 +116,7 @@ export class CharacterModel {
   }
 
   setVisible(v: boolean) { this.root.visible = v; }
+  consumeStepEvent(): boolean { const v = this.stepEvent; this.stepEvent = false; return v; }
 
   update(a: AnimInput) {
     const norm = Math.min(1, a.speed / Math.max(0.001, a.maxSpeed));
@@ -126,6 +129,13 @@ export class CharacterModel {
     // frequency & amplitude scale with speed
     const freq = 6 + norm * 6;
     this.gaitPhase += a.dt * freq * (norm > 0.02 ? 1 : 0);
+
+    // A footstep lands each half-stride while grounded and actually moving.
+    if (a.grounded && norm > 0.15) {
+      const cycle = Math.floor(this.gaitPhase / Math.PI);
+      if (cycle !== this.lastStepCycle) { this.stepEvent = true; this.lastStepCycle = cycle; }
+    }
+
     const swing = Math.sin(this.gaitPhase) * (0.35 + norm * 0.5);
     const swingArm = Math.sin(this.gaitPhase) * (0.3 + norm * 0.45);
 

@@ -26,6 +26,7 @@ interface Door {
   slide: THREE.Vector3;
   period: number;
   phase: number;
+  wasOpen?: boolean;
 }
 interface FlickerLight {
   light: THREE.PointLight;
@@ -60,6 +61,7 @@ export class LevelKit {
   private checkpointStrips: CheckpointStrip[] = [];
 
   private pickupEvent = false;
+  private doorToggleEvents: boolean[] = []; // true = opening, false = closing
   private exitMesh: THREE.Mesh | null = null;
   private exitLockedMat: THREE.MeshStandardMaterial | null = null;
   private exitOpenMat: THREE.MeshStandardMaterial | null = null;
@@ -328,6 +330,9 @@ export class LevelKit {
       const p = d.base.clone().addScaledVector(d.slide, t);
       d.body.setNextKinematicTranslation({ x: p.x, y: p.y, z: p.z });
       d.mesh.position.copy(p);
+      const opening = t > 0.5;
+      if (d.wasOpen === undefined) d.wasOpen = opening;
+      else if (opening !== d.wasOpen) { this.doorToggleEvents.push(opening); d.wasOpen = opening; }
     }
     // Keycard
     if (this.keycard && !this.keycard.collected) {
@@ -387,6 +392,7 @@ export class LevelKit {
   }
 
   consumePickup(): boolean { const v = this.pickupEvent; this.pickupEvent = false; return v; }
+  consumeDoorToggles(): boolean[] { const v = this.doorToggleEvents.slice(); this.doorToggleEvents.length = 0; return v; }
 
   dispose() {
     this.meshes.forEach(m => this.scene.remove(m));
@@ -395,6 +401,7 @@ export class LevelKit {
     this.bodies.length = 0;
     this.hazards.length = 0; this.doors.length = 0; this.lights.length = 0;
     this.keycard = null; this.exitMesh = null; this.checkpointStrips.length = 0;
+    this.doorToggleEvents.length = 0;
     this.disposables.forEach(d => d.dispose());
     this.disposables.length = 0;
   }

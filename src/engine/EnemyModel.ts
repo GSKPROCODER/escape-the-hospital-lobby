@@ -17,6 +17,8 @@ export class EnemyModel {
   private eyeMat: THREE.MeshStandardMaterial;
 
   private phase = 0;
+  private stepEvent = false;
+  private lastStepCycle = -1;
 
   constructor() {
     const skin = new THREE.MeshStandardMaterial({ color: 0x9aa39b, roughness: 1.0 });
@@ -83,10 +85,17 @@ export class EnemyModel {
   }
 
   setVisible(v: boolean) { this.root.visible = v; }
+  consumeStepEvent(): boolean { const v = this.stepEvent; this.stepEvent = false; return v; }
 
   update(dt: number, speed: number, intensity: number) {
     const freq = 3 + intensity * 5;
     this.phase += dt * freq * (speed > 0.05 ? 1 : 0.25);
+
+    if (speed > 0.05) {
+      const cycle = Math.floor(this.phase / Math.PI);
+      if (cycle !== this.lastStepCycle) { this.stepEvent = true; this.lastStepCycle = cycle; }
+    }
+
     const swing = Math.sin(this.phase) * (0.25 + intensity * 0.5);
 
     this.legL.rotation.x = swing;

@@ -217,10 +217,10 @@ of this document.
 
 | # | Missing | Why it matters | How to fix | Effort |
 |---|---|---|---|---|
-| 7.1 | **Footsteps** (player *and* enemy) | The #1 presence cue in horror; enemy steps = free dread radar. | Procedural first (filtered noise burst per step, pitch by surface), driven by gait phase in `CharacterModel`/`EnemyModel`; upgrade to CC0 samples later. Enemy steps get distance-based volume + stereo pan. | M |
-| 7.2 | **Chase music intensity system** | Music should *know* you're hunted. | 3 layers (calm drone ✓ exists / tension pulse / chase percussion) crossfaded by enemy state (`Game.isDanger()` + brain state); Web Audio gain ramps, no assets required. | M |
-| 7.3 | **Doors, hazards, keycard** | Silent auto-doors and spark poles break believability. | Door slide whoosh, spark-loop (sawtooth + crackle) attached to `sweepingHazard`, distinct keycard chime (current `select()` is reused for everything). | S |
-| 7.4 | **Win/lose stingers** | The biggest moments are silent. | Two 2-s procedural stingers (rising triad / dissonant fall). | S |
+| 7.1 | ✅ **Fixed** — footsteps (player *and* enemy) | The #1 presence cue in horror; enemy steps = free dread radar. | `CharacterModel`/`EnemyModel` detect a step each gait half-cycle (`consumeStepEvent()`); `AudioEngine.footstepPlayer()`/`footstepEnemy(distance)` play a filtered-noise burst, enemy volume falls off with distance. Stereo pan is still P2. | M |
+| 7.2 | ✅ **Fixed** — chase music intensity system | Music should *know* you're hunted. | `AudioEngine.setIntensity('calm'\|'tension'\|'chase')` crossfades 3 gain buses (calm drone / tension pulse / chase percussion loop) under `musicGain`, driven every frame in `Game.updatePlay` by `EnemyBrain.state` (patrol→calm, investigate/search→tension, chase→chase). | M |
+| 7.3 | ✅ **Fixed** — doors, hazards, keycard | Silent auto-doors and spark poles break believability. | `kit.ts` tracks door open/close transitions (`consumeDoorToggles()`) → `AudioEngine.doorSlide(opening)`; keycard/checkpoint/hazard-hit each got their own distinct sound (`keycard()`, `checkpoint()`, `hazardZap()`) instead of all sharing `select()`. Continuous spark-loop ambience on `sweepingHazard` itself is still P2. | S |
+| 7.4 | ✅ **Fixed** — win/lose stingers | The biggest moments are silent. | `AudioEngine.winSting()`/`loseSting()`, called from `App.handleWin`/`handleFail`. | S |
 | 7.5 | **Spatial audio** | Sound tells you *where* the threat is. | Howler is already a dependency but **unused** — either use its stereo API or Web Audio `PannerNode` for enemy/hazard sources. | M |
 | 7.6 | ✅ **Fixed** — dead code / gaps | `Audio.jump()` existed but was never called; ambience kept playing on the pause screen/hidden tabs. | `Player.consumeJustJumped()` now wired to `AudioEngine.jump()` in `Game.updatePlay`; `AudioEngine.suspend()` called from `App.pause()` (covers both paths — `visibilitychange`/`blur` already route through `pause()`). | S |
 | 7.7 | **Reverb** | Dry sound reads as "web demo". | One `ConvolverNode` with a generated impulse response (noise burst + decay), mixed subtly on the sfx bus. | S |
@@ -296,7 +296,8 @@ Close the two ✗ items before calling the a11y story done.
 |---|---|---|
 | **P0** | ✅ done — 3.1 auto-checkpoints · 3.2 fair respawns (+ camera start-facing & auto-trail-spin fixes found while verifying) · 3.4 chase speeds/lunge · 8.3 win-screen name · 7.6 jump sound & audio suspend | The two rage-quits are gone; the hunt is real |
 | **P0.5** | ✅ done — 3.3 bigger wings ×3 (~100m each) · universal death-grace-period bug (fall/hazard/caught all gated) · hazard tiles get automatic warning-stripe texture + pulse instead of a flat placeholder color | No more 40-second levels, no more infinite death loops, hazards read as hazards |
-| **P1** (next) | 3.5 slice finale · 7.1 footsteps · 7.2 music layers · 7.3 hazard/door sfx · 5.1 landmarks · 4.1 hide verb · 8.2 captions · 8.4 best-time delta | Stops feeling like a prototype |
+| **P1** | ✅ done — 7.1 footsteps · 7.2 music layers · 7.3 hazard/door/keycard/checkpoint sfx · 7.4 win/lose stingers | Sound no longer reads as "web demo" |
+| **P1.5** (next) | 3.5 slice finale · 5.1 landmarks · 4.1 hide verb · 8.2 captions · 8.4 best-time delta | Stops feeling like a prototype |
 | **P2** | 4.2 collectibles · 4.6 stamina · 6.1 wall textures · 6.2 dust · 6.4 scarier enemy · 8.1 remapping · 8.7 gamepad · 9.x feel pack · 10.1 code-split | Feels like a finished small game |
 | **P3** | Wings 4–15 · full reward/escape sequence · rigged characters · leaderboards · PWA | The complete 15-wing vision |
 
